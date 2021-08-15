@@ -30,20 +30,30 @@ import static android.content.Context.MODE_PRIVATE;
 public class Api {
     private static OkHttpClient client;
     private static String requestUrl;
-    private static HashMap<String, Object> mParams;
+    //private static HashMap<String, Object> mParams;
+    private static Map<String, Object> mParams;
     public static Api api = new Api();
 
     public Api() {
 
     }
 
-    public static Api config(String url, HashMap<String, Object> params) {
+
+    public static Api config(String url, Map<String, Object> params) {
         client = new OkHttpClient.Builder()
                 .build();
         requestUrl = ApiConfig.BASE_URl + url;
         mParams = params;
         return api;
     }
+
+//    public static Api config(String url, HashMap<String, Object> params) {
+//        client = new OkHttpClient.Builder()
+//                .build();
+//        requestUrl = ApiConfig.BASE_URl + url;
+//        mParams = params;
+//        return api;
+//    }
 
     public void postRequest(Context context, final TtitCallback callback) {
         SharedPreferences sp = context.getSharedPreferences("sp_ttit", MODE_PRIVATE);
@@ -112,6 +122,24 @@ public class Api {
             }
         });
     }
+
+//    private String getAppendUrl(String url, Map<String, Object> map) {
+//        if (map != null && !map.isEmpty()) {
+//            StringBuffer buffer = new StringBuffer();
+//            Iterator<Entry<String, Object>> iterator = map.entrySet().iterator();
+//            while (iterator.hasNext()) {
+//                Entry<String, Object> entry = iterator.next();
+//                if (StringUtils.isEmpty(buffer.toString())) {
+//                    buffer.append("?");
+//                } else {
+//                    buffer.append("&");
+//                }
+//                buffer.append(entry.getKey()).append("=").append(entry.getValue());
+//            }
+//            url += buffer.toString();
+//        }
+//        return url;
+//    }
 
     private String getAppendUrl(String url, Map<String, Object> map) {
         if (map != null && !map.isEmpty()) {

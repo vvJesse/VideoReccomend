@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.entity.VideoEntity;
 import com.example.videoapp.R;
+import com.example.view.CircleTransform;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
@@ -20,6 +21,15 @@ public class VideoAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     private Context context;
     private List<VideoEntity> data;
+
+
+    public void setData(List<VideoEntity> data) {
+        this.data = data;
+    }
+
+    public VideoAdapter(Context context){
+        this.context = context;
+    }
 
     public VideoAdapter(Context context, List<VideoEntity> dt){
         this.context = context;
@@ -44,13 +54,18 @@ public class VideoAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         vh.tvComment.setText(String.valueOf(videoEntity.getCommentNum()));
         vh.tvCollect.setText(String.valueOf(videoEntity.getCollectNum()));
 
-        Picasso.with(context).load(videoEntity.getHeadurl()).into(vh.imgHeader);
+        Picasso.with(context)
+                .load(videoEntity.getHeadurl()).transform(new CircleTransform())
+                .into(vh.imgHeader);
         Picasso.with(context).load(videoEntity.getCoverurl()).into(vh.imgCover);
     }
 
     @Override
     public int getItemCount() {
-        return data.size();
+        if(data!=null&&data.size()>0)
+            return data.size();
+        else
+            return 0;
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder{

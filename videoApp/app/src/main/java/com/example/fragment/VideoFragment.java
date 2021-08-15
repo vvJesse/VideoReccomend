@@ -20,10 +20,15 @@ import com.example.entity.VideoListResponse;
 import com.example.videoapp.LoginActivity;
 import com.example.videoapp.R;
 import com.google.gson.Gson;
+import com.scwang.smartrefresh.layout.api.RefreshLayout;
+import com.scwang.smartrefresh.layout.listener.OnLoadMoreListener;
+import com.scwang.smartrefresh.layout.listener.OnRefreshListener;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import util.StringUtils;
 
@@ -36,12 +41,16 @@ public class VideoFragment extends BaseFragment {
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+//    private static final String ARG_PARAM1 = "param1";
+//    private static final String ARG_PARAM2 = "param2";
 
     // TODO: Rename and change types of parameters
     private String title;
     RecyclerView recyclerView;
+    private RefreshLayout refreshLayout;
+    VideoAdapter videoAdapter;
+    List<VideoEntity> list = new ArrayList<>();
+    private int pagenum = 1;
 
     public VideoFragment() {
         // Required empty public constructor
@@ -62,6 +71,43 @@ public class VideoFragment extends BaseFragment {
         return fragment;
     }
 
+    @Override
+    protected int initLayout() {
+        return R.layout.fragment_video;
+    }
+
+    @Override
+    protected void initView() {
+        recyclerView = mRootView.findViewById(R.id.recycleView);
+        refreshLayout = mRootView.findViewById(R.id.refresh);
+    }
+
+    @Override
+    protected void initData() {
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());   //这里是fragment不是activity，得到的是homeactivity
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        recyclerView.setLayoutManager(linearLayoutManager);
+        videoAdapter = new VideoAdapter(getActivity());
+        recyclerView.setAdapter(videoAdapter);
+        refreshLayout.setOnRefreshListener(new OnRefreshListener() {
+            @Override
+            public void onRefresh(RefreshLayout refreshlayout) {
+                //refreshlayout.finishRefresh(2000/*,false*/);//传入false表示刷新失败
+                pagenum = 1;
+                getVideoList(true);
+            }
+        });
+        refreshLayout.setOnLoadMoreListener(new OnLoadMoreListener() {
+            @Override
+            public void onLoadMore(RefreshLayout refreshlayout) {
+                //refreshlayout.finishLoadMore(2000/*,false*/);//传入false表示加载失败
+                pagenum++;
+                getVideoList(false);
+            }
+        });
+        getVideoList(true);
+    }
+
 //    @Override
 //    public void onCreate(Bundle savedInstanceState) {
 //        super.onCreate(savedInstanceState);
@@ -69,46 +115,57 @@ public class VideoFragment extends BaseFragment {
 //        }
 //    }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        View v = inflater.inflate(R.layout.fragment_video, container, false);
-        recyclerView = v.findViewById(R.id.recycleView);
-
-        return v;
-    }
-
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());   //这里是fragment不是activity，得到的是homeactivity
-        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-        recyclerView.setLayoutManager(linearLayoutManager);
-        getVideoList();
-    }
-
-    private void getVideoList(){
+    private void getVideoList(boolean isRefresh){
         String token = getStringFromSp("token");
         if(!StringUtils.isEmpty(token)){
-            HashMap<String,Object> params = new HashMap<>();
-            params.put("token", "");
-            Api.config(ApiConfig.VIDEO_LIST_ALL, params).getRequest(getActivity(), new TtitCallback() {
+            Map<String, Object> params = new LinkedHashMap<>();
+            //HashMap<String,Object> params = new HashMap<>();
+            params.put("token", token);
+            params.put("page", pagenum);
+            params.put("limit", ApiConfig.PAGE_SIZE);
+            Api.config(ApiConfig.VIDEO_LIST, params).getRequest(getActivity(), new TtitCallback() {
                 @Override
                 public void onSuccess(String res) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(isRefresh){
+                                refreshLayout.finishRefresh(true);
+                            }else{
+                                refreshLayout.finishLoadMore(true);
+                            }
+                            VideoListResponse response = new Gson().fromJson(res, VideoListResponse.class);
+                            if (response!=null && response.getCode()==0){
+                                List<VideoEntity> data = response.getPage().getList();
+                                if(data!=null && data.size() > 0){
+                                    if(isRefresh){
+                                        list = data;
+                                    }else {
+                                        list.addAll(data);
+                                    }
+                                    videoAdapter.setData(list);
+                                    videoAdapter.notifyDataSetChanged();
+                                }else {
+                                    if(isRefresh){
+                                        showToast("暂时无数据加载");
+                                    }else{
+                                        showToast("没有更多数据了");
+                                    }
+                                }
+                            }
+                        }
+                    });
 
-                    VideoListResponse response = new Gson().fromJson(res, VideoListResponse.class);
-                    if (response!=null && response.getCode()==0){
-                        List<VideoEntity> data = response.getPage().getList();
-                        VideoAdapter videoAdapter = new VideoAdapter(getActivity(), data);
-                        recyclerView.setAdapter(videoAdapter);
-                    }
 //                    showToastSync(res);
                 }
 
                 @Override
                 public void onFailure(Exception e) {
-
+                    if(isRefresh){
+                        refreshLayout.finishRefresh(true);
+                    }else {
+                        refreshLayout.finishLoadMore(true);
+                    }
                 }
             });
         }else{
